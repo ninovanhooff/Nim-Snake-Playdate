@@ -17,6 +17,10 @@ type Snake = ref object
     parts: seq[SnakePart]
     moveDirection: Direction
 
+type Point = tuple
+    x: int
+    y: int
+
 proc head(self: Snake): SnakePart =
     return self.parts[self.parts.len - 1]
 
@@ -30,6 +34,13 @@ proc moveSigns(self: Direction): (int, int) =
             (-1, 0)
         of dRight:
             (1, 0)
+
+proc boardToPixel(boardPoint: Point): Point =
+    (x: boardPoint.x * 25, y: boardPoint.y * 25)
+
+proc snakePartToPixel(self: SnakePart): Point = 
+    boardToPixel(self)
+
 
 type Game = ref object
     snake: Snake
@@ -69,7 +80,7 @@ proc update(): int =
     let head = snake.head()
     let signs = moveSigns(snake.moveDirection)
     playdate.system.logToConsole(fmt"len before { snake.parts.len } moveDirection { snake.moveDirection }")
-    snake.parts.add((x: head.x + signs[0] * 25, y: head.y + signs[1] * 25))
+    snake.parts.add((x: head.x + signs[0], y: head.y + signs[1]))
 
     playdate.system.drawFPS(0, 0)
 
@@ -77,7 +88,8 @@ proc update(): int =
 
     for i in countup(gameViewState.numPartsDrawn, snake.parts.len - 1):
         let part = snake.parts[i]
-        playdate.graphics.drawRect(part.x, part.y, 20, 20, kColorBlack)
+        let pixelCoords = snakePartToPixel(part)
+        playdate.graphics.drawRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
     
     gameViewState.numPartsDrawn = snake.parts.len
 
@@ -97,7 +109,7 @@ type
 # This is the application entrypoint and event handler
 proc handler(event: PDSystemEvent, keycode: uint) {.raises: [].} =
     if event == kEventInit:
-        let initialSnake = Snake(parts: @[(x: 100, y:50)])
+        let initialSnake = Snake(parts: @[(x: 10, y:5)])
         game = Game(snake: initialSnake)
         gameViewState = GameViewState(numPartsDrawn: 0)
 
