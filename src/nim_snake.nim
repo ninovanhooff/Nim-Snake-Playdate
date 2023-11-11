@@ -4,52 +4,82 @@ const FONT_PATH = "/System/Fonts/Asheville-Sans-14-Bold.pft"
 const NIM_IMAGE_PATH = "/images/nim_logo"
 const PLAYDATE_NIM_IMAGE_PATH = "/images/playdate_nim"
 
+type
+    SnakePart = tuple[x: int, y: int]
+    Direction = enum
+        dUp
+        dDown
+        dLeft
+        dRight
+
+
+type Snake = ref object
+    parts: seq[SnakePart]
+    moveDirection: Direction
+
+proc head(self: Snake): SnakePart =
+    return self.parts[self.parts.len - 1]
+
+proc moveSigns(self: Direction): (int, int) =
+    result = case self:
+        of dDown:
+            (0, 1)
+        of dUp:
+            (0, -1)
+        of dLeft:
+            (-1, 0)
+        of dRight:
+            (1, 0)
+
+type Game = ref object
+    snake: Snake
+
+type GameViewState = ref object
+    numPartsDrawn: int
+
+
+var game: Game
+var gameViewState: GameViewState
+
 var font: LCDFont
 
 var playdateNimBitmap: LCDBitmap
 var nimLogoBitmap: LCDBitmap
 
-var sprite: LCDSprite
-
 var samplePlayer: SamplePlayer
 var filePlayer: FilePlayer
-
-var x = int(LCD_COLUMNS / 2)
-var y = int(LCD_ROWS / 2) + 32
 
 proc update(): int =
     # playdate is the global PlaydateAPI instance, available when playdate/api is imported
     let buttonsState = playdate.system.getButtonsState()
+    var snake = game.snake
 
-    if kButtonRight in buttonsState.current:
-        x += 10
-    if kButtonLeft in buttonsState.current:
-        x -= 10
-    if kButtonUp in buttonsState.current:
-        y -= 10
-    if kButtonDown in buttonsState.current:
-        y += 10
+    if kButtonRight in buttonsState.pushed:
+        snake.moveDirection = dRight
+    if kButtonLeft in buttonsState.pushed:
+        snake.moveDirection = dLeft
+    if kButtonUp in buttonsState.pushed:
+        snake.moveDirection = dUp
+    if kButtonDown in buttonsState.pushed:
+        snake.moveDirection = dDown
 
     if kButtonA in buttonsState.pushed:
         samplePlayer.play(1, 1.0)
 
-    let goalX = x.toFloat
-    let goalY = y.toFloat
-    let res = sprite.moveWithCollisions(goalX, goalY)
-    x = res.actualX.int
-    y = res.actualY.int
-    if res.collisions.len > 0:
-        # fmt allows the "{variable}" syntax for formatting strings
-        playdate.system.logToConsole(fmt"{res.collisions.len} collision(s) occurred!")
+    let head = snake.head()
+    let signs = moveSigns(snake.moveDirection)
+    playdate.system.logToConsole(fmt"len before { snake.parts.len } moveDirection { snake.moveDirection }")
+    snake.parts.add((x: head.x + signs[0] * 25, y: head.y + signs[1] * 25))
 
-    playdate.sprite.drawSprites()
     playdate.system.drawFPS(0, 0)
 
-    playdate.graphics.setDrawMode(kDrawModeNXOR)
-    playdate.graphics.drawText("Nim Nino!", 1, 12)
+    playdate.system.logToConsole(fmt"{gameViewState.numPartsDrawn}, {snake.parts.len}")
 
-    playdate.graphics.setDrawMode(kDrawModeCopy)
-    playdateNimBitmap.draw(22, 65, kBitmapUnflipped)
+    for i in countup(gameViewState.numPartsDrawn, snake.parts.len - 1):
+        let part = snake.parts[i]
+        playdate.graphics.drawRect(part.x, part.y, 20, 20, kColorBlack)
+    
+    gameViewState.numPartsDrawn = snake.parts.len
 
     return 1
 
@@ -67,9 +97,12 @@ type
 # This is the application entrypoint and event handler
 proc handler(event: PDSystemEvent, keycode: uint) {.raises: [].} =
     if event == kEventInit:
-        playdate.display.setRefreshRate(50)
-        # Enables the accelerometer even if it's not used here
-        playdate.system.setPeripheralsEnabled(kAllPeripherals)
+        let initialSnake = Snake(parts: @[(x: 100, y:50)])
+        game = Game(snake: initialSnake)
+        gameViewState = GameViewState(numPartsDrawn: 0)
+
+
+        playdate.display.setRefreshRate(2)
 
         # Errors are handled through exceptions
         try:
@@ -92,39 +125,6 @@ proc handler(event: PDSystemEvent, keycode: uint) {.raises: [].} =
 
         playdateNimBitmap = try: playdate.graphics.newBitmap(PLAYDATE_NIM_IMAGE_PATH) except: nil
         nimLogoBitmap = try: playdate.graphics.newBitmap(NIM_IMAGE_PATH) except: nil
-
-        sprite = playdate.sprite.newSprite()
-        sprite.add()
-        sprite.moveTo(x.float, y.float)
-        sprite.setImage(nimLogoBitmap, kBitmapUnflipped)
-        sprite.collideRect = PDRect(x: 0, y: 12, width: 64, height: 40)
-        # Slide when a collision occurs
-        sprite.setCollisionResponseFunction(
-            proc(sprite, other: LCDSprite): auto =
-                kCollisionTypeSlide
-        )
-
-        # Create screen walls
-        let sprite1 = playdate.sprite.newSprite()
-        sprite1.add()
-        sprite1.moveTo(0, -1)
-        sprite1.collideRect = PDRect(x: 0, y: 0, width: 400, height: 1)
-        sprite1.collisionsEnabled = true
-
-        let sprite2 = playdate.sprite.newSprite()
-        sprite2.add()
-        sprite2.moveTo(400, 0)
-        sprite2.collideRect = PDRect(x: 0, y: 0, width: 1, height: 240)
-
-        let sprite3 = playdate.sprite.newSprite()
-        sprite3.add()
-        sprite3.moveTo(-1, 0)
-        sprite3.collideRect = PDRect(x: 0, y: 0, width: 1, height: 240)
-
-        let sprite4 = playdate.sprite.newSprite()
-        sprite4.add()
-        sprite4.moveTo(0, 240)
-        sprite4.collideRect = PDRect(x: 0, y: 0, width: 400, height: 1)
 
         try:
             # Decode a JSON string to an object, type safe!
