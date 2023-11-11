@@ -77,19 +77,23 @@ proc update(): int =
     if kButtonA in buttonsState.pushed:
         samplePlayer.play(1, 1.0)
 
-    let head = snake.head()
+    let oldHead = snake.head()
+    let oldTail = snake.parts[0]
     let signs = moveSigns(snake.moveDirection)
     playdate.system.logToConsole(fmt"len before { snake.parts.len } moveDirection { snake.moveDirection }")
-    snake.parts.add((x: head.x + signs[0], y: head.y + signs[1]))
+    snake.parts.add((x: oldHead.x + signs[0], y: oldHead.y + signs[1]))
+    snake.parts.delete(0)
 
     playdate.system.drawFPS(0, 0)
 
     playdate.system.logToConsole(fmt"{gameViewState.numPartsDrawn}, {snake.parts.len}")
 
-    for i in countup(gameViewState.numPartsDrawn, snake.parts.len - 1):
-        let part = snake.parts[i]
-        let pixelCoords = snakePartToPixel(part)
-        playdate.graphics.drawRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
+    var part = oldTail
+    var pixelCoords = snakePartToPixel(part)
+    playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorWhite)
+    part = snake.head()
+    pixelCoords = snakePartToPixel(part)
+    playdate.graphics.drawRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
     
     gameViewState.numPartsDrawn = snake.parts.len
 
@@ -109,7 +113,7 @@ type
 # This is the application entrypoint and event handler
 proc handler(event: PDSystemEvent, keycode: uint) {.raises: [].} =
     if event == kEventInit:
-        let initialSnake = Snake(parts: @[(x: 10, y:5)])
+        let initialSnake = Snake(parts: @[(x: 8, y:5), (x: 9, y:5), (x: 10, y:5)])
         game = Game(snake: initialSnake)
         gameViewState = GameViewState(numPartsDrawn: 0)
 
