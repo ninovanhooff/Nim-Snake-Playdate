@@ -1,0 +1,4 @@
+name=Nim Snake
+author=Nino van Hooff
+description=An example application using the Playdate Nim bindings
+bundleId=com.ninovanhooff.nimsnake
