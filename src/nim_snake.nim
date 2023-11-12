@@ -1,11 +1,24 @@
 import playdate/api
+import strformat
 
 const FONT_PATH = "/System/Fonts/Asheville-Sans-14-Bold.pft"
-const NIM_IMAGE_PATH = "/images/nim_logo"
-const PLAYDATE_NIM_IMAGE_PATH = "/images/playdate_nim"
+
+const 
+    ROWS = 100
+    COLS = 14
 
 type
-    SnakePart = tuple[x: int, y: int]
+    Tile = enum
+        tEmpty
+        tApple
+        tWall
+    Col = array[ROWS, Tile]
+    Board = array[COLS, Col]
+
+    SnakePart = tuple
+        x: int
+        y: int
+
     Direction = enum
         dUp
         dDown
@@ -20,6 +33,13 @@ type Snake = ref object
 type Point = tuple
     x: int
     y: int
+
+type Game = ref object
+    snake: Snake
+    board: Board
+
+type GameViewState = ref object
+    numPartsDrawn: int
 
 proc head(self: Snake): SnakePart =
     return self.parts[self.parts.len - 1]
@@ -41,21 +61,23 @@ proc boardToPixel(boardPoint: Point): Point =
 proc snakePartToPixel(self: SnakePart): Point = 
     boardToPixel(self)
 
+proc `[]`(b: Board, r, c: int): Tile =
+  b[r][c]
 
-type Game = ref object
-    snake: Snake
+proc drawBoard(board: Board) {.raises: [ValueError].} =
+    for y, row in board:
+        for x, tile in row:
+            playdate.system.logToConsole(fmt" {x} {y} {tile}")
+            if tile == tApple:
+                let pixelCoords = boardToPixel((x,y))
+                playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
 
-type GameViewState = ref object
-    numPartsDrawn: int
 
 
 var game: Game
 var gameViewState: GameViewState
 
 var font: LCDFont
-
-var playdateNimBitmap: LCDBitmap
-var nimLogoBitmap: LCDBitmap
 
 var samplePlayer: SamplePlayer
 var filePlayer: FilePlayer
@@ -64,6 +86,7 @@ proc update(): int =
     # playdate is the global PlaydateAPI instance, available when playdate/api is imported
     let buttonsState = playdate.system.getButtonsState()
     var snake = game.snake
+    var board = game.board
 
     if kButtonRight in buttonsState.pushed:
         snake.moveDirection = dRight
@@ -80,13 +103,21 @@ proc update(): int =
     let oldHead = snake.head()
     let oldTail = snake.parts[0]
     let signs = moveSigns(snake.moveDirection)
-    playdate.system.logToConsole(fmt"len before { snake.parts.len } moveDirection { snake.moveDirection }")
-    snake.parts.add((x: oldHead.x + signs[0], y: oldHead.y + signs[1]))
-    snake.parts.delete(0)
+    let newHead: SnakePart = (x: oldHead.x + signs[0], y: oldHead.y + signs[1])
+    snake.parts.add(newHead)
+    playdate.system.logToConsole(fmt"newHead {newHead.x}")
+
+    if board[newHead.x][newHead.y] == tApple:
+        # mark apple as eaten
+        game.board[newHead.x][newHead.y] = tEmpty
+        var pixelCoords = snakePartToPixel(newHead)
+        playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorWhite)
+        # do NOT delete the tail from snake parts in this case, effectively growing the snake
+    else:
+        snake.parts.delete(0)
 
     playdate.system.drawFPS(0, 0)
 
-    playdate.system.logToConsole(fmt"{gameViewState.numPartsDrawn}, {snake.parts.len}")
 
     var part = oldTail
     var pixelCoords = snakePartToPixel(part)
@@ -99,22 +130,27 @@ proc update(): int =
 
     return 1
 
-import std/json
-type
-    Equip = ref object
-        name: string
-        damage: int
-    Entity = ref object
-        name: string
-        enemy: bool
-        health: int
-        equip: seq[Equip]
+proc catchingUpdate(): int = 
+    try:
+        return update()
+    except:
+        var message: string = ""
+        try: 
+            message = &"{getCurrentExceptionMsg()}\n{getCurrentException().getStackTrace()}\nFATAL EXCEPTION. STOP"
+        except:
+            message = getCurrentExceptionMsg() & getCurrentException().getStackTrace()
+        playdate.system.error(message) # this will stop the program
+        return 0 # code not reached
 
 # This is the application entrypoint and event handler
-proc handler(event: PDSystemEvent, keycode: uint) {.raises: [].} =
+proc handler(event: PDSystemEvent, keycode: uint) {.raises: [ValueError].} =
     if event == kEventInit:
         let initialSnake = Snake(parts: @[(x: 8, y:5), (x: 9, y:5), (x: 10, y:5)])
-        game = Game(snake: initialSnake)
+        var initialBoard : Board
+        initialBoard[3][3] = tApple
+        echo initialBoard[3][3]
+        game = Game(snake: initialSnake, board: initialBoard)
+        drawBoard(initialBoard)
         gameViewState = GameViewState(numPartsDrawn: 0)
 
 
@@ -139,26 +175,8 @@ proc handler(event: PDSystemEvent, keycode: uint) {.raises: [].} =
         font = try: playdate.graphics.newFont(FONT_PATH) except: nil
         playdate.graphics.setFont(font)
 
-        playdateNimBitmap = try: playdate.graphics.newBitmap(PLAYDATE_NIM_IMAGE_PATH) except: nil
-        nimLogoBitmap = try: playdate.graphics.newBitmap(NIM_IMAGE_PATH) except: nil
-
-        try:
-            # Decode a JSON string to an object, type safe!
-            let jsonString = playdate.file.open("/json/data.json", kFileRead).readString()
-            let obj = parseJson(jsonString).to(Entity)
-            playdate.system.logToConsole(fmt"JSON decoded: {obj.repr}")
-            # Encode an object to a JSON string, %* is the encode operator
-            playdate.system.logToConsole(fmt"JSON encoded: {(%* obj).pretty}")
-
-            let faultyString = playdate.file.open("/json/error.json", kFileRead).readString()
-            # This generates an exception
-            discard parseJson(faultyString).to(Entity)
-        except:
-            playdate.system.logToConsole("This below is an expected error:")
-            playdate.system.logToConsole(getCurrentExceptionMsg())
-
         # Set the update callback
-        playdate.system.setUpdateCallback(update)
+        playdate.system.setUpdateCallback(catchingUpdate)
 
 # Used to setup the SDK entrypoint
 initSDK()
