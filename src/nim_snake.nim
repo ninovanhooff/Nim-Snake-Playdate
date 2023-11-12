@@ -22,8 +22,9 @@ proc catchingUpdate(): int =
             message = &"{getCurrentExceptionMsg()}\n{exception.getStackTrace()}\nFATAL EXCEPTION. STOP."
         except:
             message = getCurrentExceptionMsg() & exception.getStackTrace()
-            playdate.system.error(message) # this will stop the program
-            return 0 # code not reached
+            
+        playdate.system.error(message) # this will stop the program
+        return 0 # code not reached
 
 # This is the application entrypoint and event handler
 proc handler(event: PDSystemEvent, keycode: uint) {.raises: [ValueError].} =
