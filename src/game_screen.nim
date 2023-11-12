@@ -35,7 +35,7 @@ type Point = tuple
     y: int
 
 
-type Game* = ref object of Screen
+type GameScreen* = ref object of Screen
     snake: Snake
     board: Board
 
@@ -67,7 +67,7 @@ proc drawBoard(board: Board) {.raises: [ValueError].} =
                 let pixelCoords = boardToPixel((x,y))
                 playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
 
-method update*(game: Game): int =
+method update*(game: GameScreen): int =
     let buttonsState = playdate.system.getButtonsState()
     var snake = game.snake
     var board = game.board
@@ -109,10 +109,10 @@ method update*(game: Game): int =
 
     return 1
 
-proc newGame*(): Game =
+proc newGame*(): GameScreen =
     let initialSnake = Snake(parts: @[(x: 8, y:5), (x: 9, y:5), (x: 10, y:5)])
     var initialBoard : Board
     initialBoard[3][3] = tApple
     echo initialBoard[3][3]
     drawBoard(initialBoard)
-    return Game(snake: initialSnake, board: initialBoard)
+    return GameScreen(snake: initialSnake, board: initialBoard)

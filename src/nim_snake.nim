@@ -1,7 +1,7 @@
 import playdate/api
 import strformat
 import screen
-from game_screen import newGame, Game
+from game_screen import newGame
 
 const FONT_PATH = "/System/Fonts/Asheville-Sans-14-Bold.pft"
 
@@ -22,7 +22,7 @@ proc catchingUpdate(): int =
             message = &"{getCurrentExceptionMsg()}\n{exception.getStackTrace()}\nFATAL EXCEPTION. STOP."
         except:
             message = getCurrentExceptionMsg() & exception.getStackTrace()
-            
+
         playdate.system.error(message) # this will stop the program
         return 0 # code not reached
 
