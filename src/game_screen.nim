@@ -1,6 +1,8 @@
 import playdate/api
 import strformat
 
+from screen import Screen
+
 const 
     ROWS = 100
     COLS = 14
@@ -32,7 +34,8 @@ type Point = tuple
     x: int
     y: int
 
-type Game* = ref object
+
+type Game* = ref object of Screen
     snake: Snake
     board: Board
 
@@ -56,9 +59,6 @@ proc boardToPixel(boardPoint: Point): Point =
 proc snakePartToPixel(self: SnakePart): Point = 
     boardToPixel(self)
 
-proc `[]`(b: Board, r, c: int): Tile =
-  b[r][c]
-
 proc drawBoard(board: Board) {.raises: [ValueError].} =
     for y, row in board:
         for x, tile in row:
@@ -67,7 +67,7 @@ proc drawBoard(board: Board) {.raises: [ValueError].} =
                 let pixelCoords = boardToPixel((x,y))
                 playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
 
-proc gameUpdate*(game: Game): int =
+method update*(game: Game): int =
     let buttonsState = playdate.system.getButtonsState()
     var snake = game.snake
     var board = game.board
@@ -109,7 +109,7 @@ proc gameUpdate*(game: Game): int =
 
     return 1
 
-proc gameInit*(): Game =
+proc newGame*(): Game =
     let initialSnake = Snake(parts: @[(x: 8, y:5), (x: 9, y:5), (x: 10, y:5)])
     var initialBoard : Board
     initialBoard[3][3] = tApple

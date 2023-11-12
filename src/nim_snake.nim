@@ -1,10 +1,11 @@
 import playdate/api
 import strformat
-from game_screen import gameUpdate, gameInit, Game
+import screen
+from game_screen import newGame, Game
 
 const FONT_PATH = "/System/Fonts/Asheville-Sans-14-Bold.pft"
 
-var game: Game
+var activeScreen : Screen
 
 var font: LCDFont
 
@@ -13,7 +14,7 @@ var filePlayer: FilePlayer
 
 proc catchingUpdate(): int = 
     try:
-        return gameUpdate(game)
+        return activeScreen.update()
     except:
         let exception = getCurrentException()
         var message: string = ""
@@ -27,7 +28,7 @@ proc catchingUpdate(): int =
 # This is the application entrypoint and event handler
 proc handler(event: PDSystemEvent, keycode: uint) {.raises: [ValueError].} =
     if event == kEventInit:
-        game = gameInit()
+        activeScreen = newGame()
         playdate.display.setRefreshRate(2)
 
         # Errors are handled through exceptions
