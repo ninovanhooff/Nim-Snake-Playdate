@@ -80,7 +80,6 @@ method update*(game: GameScreen): int =
         snake.moveDirection = dUp
     if kButtonDown in buttonsState.pushed:
         snake.moveDirection = dDown
-
     let oldHead = snake.head()
     let oldTail = snake.parts[0]
     let signs = moveSigns(snake.moveDirection)
