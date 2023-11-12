@@ -4,6 +4,11 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "open sim",
+            "type": "shell",
+            "command": "open ${workspaceFolder}/playdate.pdx"
+        },
+        {
             "label": "Build Universal PDX",
             "type": "shell",
             "command": "nimble all",
