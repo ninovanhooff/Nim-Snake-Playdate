@@ -3,22 +3,18 @@ import std/strutils
 import playdate/api
 import strformat
 import screen
-from game_screen import newGame
+import navigator
+from cutscene_screen import newCutsceneScreen
 
-const FONT_PATH = "/System/Fonts/Asheville-Sans-14-Bold.pft"
-
-var activeScreen : Screen
-
-var font: LCDFont
-
-var samplePlayer: SamplePlayer
-var filePlayer: FilePlayer
-
-
+var firstUpdate: bool = true
 
 proc catchingUpdate(): int = 
     try:
-        return activeScreen.update()
+        if(firstUpdate):
+            navigate(newCutsceneScreen())
+            firstUpdate = false
+
+        return getActiveScreen().update()
     except:
         let exception = getCurrentException()
         var message: string = ""
@@ -34,32 +30,16 @@ proc catchingUpdate(): int =
         return 0 # code not reached
 
 # This is the application entrypoint and event handler
-proc handler(event: PDSystemEvent, keycode: uint) {.raises: [ValueError].} =
+proc handler(event: PDSystemEvent, keycode: uint) {.raises: [].} =
 
-    if event == kEventInit:
-        activeScreen = newGame()
-        playdate.display.setRefreshRate(2)
+    if event == kEventInitLua:
+        # # Set the update callback
+        # # An active screen is required at all times
+        # try:
+        #     navigate(newCutsceneScreen())
+        # except:
+        #     playdate.system.logToConsole("couldn't navigate")
 
-        # Errors are handled through exceptions
-        try:
-            samplePlayer = playdate.sound.newSamplePlayer("/audio/jingle")
-        except:
-            playdate.system.logToConsole(getCurrentExceptionMsg())
-        # Inline try/except
-        filePlayer = try: playdate.sound.newFilePlayer("/audio/finally_see_the_light") except: nil
-
-        filePlayer.play(0)
-
-        # Add a checkmark menu item that plays a sound when switched and unpaused
-        discard playdate.system.addCheckmarkMenuItem("Checkmark", false,
-            proc(menuItem: PDMenuItemCheckmark) =
-                samplePlayer.play(1, 1.0)
-        )
-
-        font = try: playdate.graphics.newFont(FONT_PATH) except: nil
-        playdate.graphics.setFont(font)
-
-        # Set the update callback
         playdate.system.setUpdateCallback(catchingUpdate)
 
 # Used to setup the SDK entrypoint

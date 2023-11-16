@@ -30,3 +30,11 @@ Panels.Settings.showMenuOnLaunch = true
 -- START:
 -- send the data table of your comic (or an example above) to the `start()` command
 -- Panels.start(comicData)
+
+function StartPanelsExample(finishCallback)
+    Panels.startCutscene(comicData, finishCallback)
+end
+
+function UpdatePanels()
+    Panels.update()
+end

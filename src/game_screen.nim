@@ -68,6 +68,7 @@ proc drawBoard(board: Board) {.raises: [ValueError].} =
                 playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
 
 method update*(game: GameScreen): int =
+    playdate.display.setRefreshRate(2)
     let buttonsState = playdate.system.getButtonsState()
     var snake = game.snake
     var board = game.board
