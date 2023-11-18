@@ -60,7 +60,7 @@ proc snakePartToPixel(self: SnakePart): Point =
     boardToPixel(self)
 
 proc randomizeApple(board: var Board) =
-    board[rand(COLS-1)][rand(ROWS-1)] = tApple
+    board[3][3] = tApple
 
 proc drawBoard(board: Board) {.raises: [].} =
     for y, row in board:
