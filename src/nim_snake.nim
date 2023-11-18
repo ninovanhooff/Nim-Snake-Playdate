@@ -4,6 +4,7 @@ import playdate/api
 import strformat
 import screen
 import navigator
+import bench
 from cutscene_screen import newCutsceneScreen
 from game_screen import newGame
 
