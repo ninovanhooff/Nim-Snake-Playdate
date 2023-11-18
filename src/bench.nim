@@ -23,7 +23,7 @@ var testImage: LCDBitmap
 var testBack: LCDBitmap
 var testSprite: LCDBitmap
 
-type TestLambda = () -> void
+type TestLambda = () -> (void)
 type NamedTestLambda = tuple[name: string, lambda: TestLambda]
 
 type BenchScreen* = ref object of Screen
@@ -32,7 +32,7 @@ var gfx: ptr PlaydateGraphics
 
 proc now(): uint = playdate.system.getCurrentTimeMilliseconds
 
-let fNil: TestLambda = () => nil
+let fNil: TestLambda = () => (discard)
 
 let fDrawLineDiagonal: TestLambda = 
     () => gfx.drawLine(0,0,W,H, 1, kColorBlack)
@@ -52,23 +52,26 @@ let fDrawLineFillRect: TestLambda =
 let fDrawLineDrawRect: TestLambda = 
     () => playdate.graphics.drawRect(0,CH,W,1, kColorBlack)
 
+proc print(what: string) = 
+    playdate.system.logToConsole(what)
+
 let fMathRandom: TestLambda = 
-    () => (
-        discard rand(999999)
-        nil
+    () => (block:
+        discard rand(999)
+        (discard)
     )
 
 # in nim, there is no concept of global vs local like in Lua.
 let fMathRandomLocal: TestLambda = 
-    () => (
-        discard rand(999999)
-        nil
+    () => (block:
+        discard rand(999)
+        (discard)
     )
 
 let fMathSin: TestLambda = 
-    () => (
+        () => (block:
         discard sin(1.5f)
-        nil
+        (discard)
     )
 
 
@@ -90,6 +93,7 @@ var count = 0
 var done: bool = false
 var cmd = 0 # different from lua because 0-based indexing in Nim
 let max = funcs.len
+var logLines: seq[string] = @[]
 
 method init*(bench: BenchScreen) =
     gfx = playdate.graphics
@@ -101,9 +105,9 @@ method init*(bench: BenchScreen) =
     testImage = try: playdate.graphics.newBitmap("/images/nim_logo") except: nil
     testBack = try: playdate.graphics.newBitmap( "Images/background" ) except: nil
     testSprite = try: playdate.graphics.newBitmap("Images/playerImage") except: nil
-
-
     cmd = 0
+    count = 0
+    done = false
 
 method  update*(bench: BenchScreen): int = 
     if cmd == 0:
@@ -119,14 +123,23 @@ method  update*(bench: BenchScreen): int =
         
         done = true
 
-    if done:
-        playdate.system.logToConsole(fmt"{funcs[cmd].name} {count}")
+    if done and cmd < max:
+        logLines.add(fmt"{funcs[cmd].name} {count}")
         done = false
+        count = 0
         cmd += 1
 
-    if cmd >= max:
-        navigate(newGame())
-        return 0
+    if cmd >= max and not done:
+        gfx.clear(kColorWhite)
+        let buttonsState = playdate.system.getButtonsState()
+        for line in logLines:
+            playdate.system.logToConsole(line)
+
+        done = true
+
+        if kButtonA in buttonsState.pushed:
+            navigate(BenchScreen())
+            return 0
         
 
 
