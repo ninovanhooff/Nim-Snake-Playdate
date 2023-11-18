@@ -5,6 +5,7 @@ import strformat
 import screen
 import navigator
 from cutscene_screen import newCutsceneScreen
+from game_screen import newGame
 
 var firstUpdate: bool = true
 

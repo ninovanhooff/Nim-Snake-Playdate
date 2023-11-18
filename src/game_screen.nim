@@ -1,6 +1,6 @@
 import playdate/api
 import strformat
-
+from navigator import navigate
 from screen import Screen
 
 const 
@@ -59,16 +59,28 @@ proc boardToPixel(boardPoint: Point): Point =
 proc snakePartToPixel(self: SnakePart): Point = 
     boardToPixel(self)
 
-proc drawBoard(board: Board) {.raises: [ValueError].} =
+proc randomizeApple(board: var Board) =
+    board[rand(COLS-1)][rand(ROWS-1)] = tApple
+
+proc drawBoard(board: Board) {.raises: [].} =
     for y, row in board:
         for x, tile in row:
-            playdate.system.logToConsole(fmt" {x} {y} {tile}")
             if tile == tApple:
                 let pixelCoords = boardToPixel((x,y))
                 playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
 
-method update*(game: GameScreen): int =
+proc newGame*(): GameScreen {.raises:[].} =
+    let initialSnake = Snake(parts: @[(x: 8, y:5), (x: 9, y:5), (x: 10, y:5)])
+    var initialBoard : Board
+    randomizeApple(initialBoard)
+    return GameScreen(snake: initialSnake, board: initialBoard)
+
+method init*(screen: GameScreen) =
     playdate.display.setRefreshRate(2)
+    playdate.graphics.clear(kColorWhite)
+    drawBoard(screen.board)
+
+method update*(game: GameScreen): int =
     let buttonsState = playdate.system.getButtonsState()
     var snake = game.snake
     var board = game.board
@@ -88,7 +100,18 @@ method update*(game: GameScreen): int =
     snake.parts.add(newHead)
     playdate.system.logToConsole(fmt"newHead {newHead.x}")
 
-    if board[newHead.x][newHead.y] == tApple:
+    let tileAtHead = block:
+        try:
+            board[newHead.x][newHead.y]
+        except:
+            tWall
+
+    if tileAtHead == tWall:
+        playdate.system.logToConsole("Hit the wall. Restarting Snake")
+        navigate(newGame())
+        return
+
+    if tileAtHead == tApple:
         # mark apple as eaten
         game.board[newHead.x][newHead.y] = tEmpty
         var pixelCoords = snakePartToPixel(newHead)
@@ -108,11 +131,3 @@ method update*(game: GameScreen): int =
     playdate.graphics.drawRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
 
     return 1
-
-proc newGame*(): GameScreen =
-    let initialSnake = Snake(parts: @[(x: 8, y:5), (x: 9, y:5), (x: 10, y:5)])
-    var initialBoard : Board
-    initialBoard[3][3] = tApple
-    echo initialBoard[3][3]
-    drawBoard(initialBoard)
-    return GameScreen(snake: initialSnake, board: initialBoard)

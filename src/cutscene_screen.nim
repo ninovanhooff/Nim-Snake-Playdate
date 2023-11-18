@@ -2,6 +2,7 @@ import playdate/api
 
 from navigator import navigate
 from screen import Screen
+from game_screen import newGame
 
 type CutSceneScreen = ref object of Screen
 
@@ -38,8 +39,8 @@ proc finishCallback(state: LuaStatePtr): cint {.cdecl, raises: [].} =
     except:
         playdate.system.logToConsole(getCurrentExceptionMsg())
 
-    playdate.system.logToConsole("cutscene finished. Restarting cutscene")
-    navigate(newCutsceneScreen())
+    playdate.system.logToConsole("cutscene finished. Starting game")
+    navigate(newGame())
     
     return 0
 
