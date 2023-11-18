@@ -1,10 +1,13 @@
+{.experimental: "codeReordering".}
+
 import playdate/api
 import strformat
+import std/random
 from navigator import navigate
 from screen import Screen
 
 const 
-    ROWS = 100
+    ROWS = 8
     COLS = 14
 
 type
@@ -60,14 +63,22 @@ proc snakePartToPixel(self: SnakePart): Point =
     boardToPixel(self)
 
 proc randomizeApple(board: var Board) =
-    board[3][3] = tApple
+    let 
+        x = rand(COLS-1)
+        y = rand(ROWS-1)
+    board[x][y] = tApple
+    try: playdate.system.logToConsole(fmt"Apple at {x}, {y}") except: discard
+    drawApple(x, y)
+    
+proc drawApple(x: int, y: int) =
+    let pixelCoords = boardToPixel((x,y))
+    playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
 
 proc drawBoard(board: Board) {.raises: [].} =
     for y, row in board:
         for x, tile in row:
             if tile == tApple:
-                let pixelCoords = boardToPixel((x,y))
-                playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorBlack)
+                drawApple(x, y)
 
 proc newGame*(): GameScreen {.raises:[].} =
     let initialSnake = Snake(parts: @[(x: 8, y:5), (x: 9, y:5), (x: 10, y:5)])
@@ -116,6 +127,7 @@ method update*(game: GameScreen): int =
         game.board[newHead.x][newHead.y] = tEmpty
         var pixelCoords = snakePartToPixel(newHead)
         playdate.graphics.fillRect(pixelCoords.x, pixelCoords.y, 20, 20, kColorWhite)
+        randomizeApple(game.board)
         # do NOT delete the tail from snake parts in this case, effectively growing the snake
     else:
         snake.parts.delete(0)

@@ -13,7 +13,7 @@ var firstUpdate: bool = true
 proc catchingUpdate(): int = 
     try:
         if(firstUpdate):
-            navigate(newCutsceneScreen())
+            navigate(BenchScreen())
             firstUpdate = false
 
         return getActiveScreen().update()
@@ -41,7 +41,7 @@ proc handler(event: PDSystemEvent, keycode: uint) {.raises: [].} =
         #     navigate(newCutsceneScreen())
         # except:
         #     playdate.system.logToConsole("couldn't navigate")
-
+        playdate.system.randomize()
         playdate.system.setUpdateCallback(catchingUpdate)
 
 # Used to setup the SDK entrypoint
