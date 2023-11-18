@@ -55,24 +55,42 @@ let fDrawLineDrawRect: TestLambda =
 proc print(what: string) = 
     playdate.system.logToConsole(what)
 
-let fMathRandom: TestLambda = 
+let fMathRandomSugar: TestLambda = 
     () => (block:
         discard rand(999)
         (discard)
     )
 
 # in nim, there is no concept of global vs local like in Lua.
-let fMathRandomLocal: TestLambda = 
-    () => (block:
-        discard rand(999)
-        (discard)
-    )
+let fMathRandomProc: TestLambda = proc() = 
+    discard rand(999)
+    (discard)
 
-let fMathSin: TestLambda = 
+let fMathSinSugar: TestLambda = 
         () => (block:
         discard sin(1.5f)
         (discard)
     )
+
+let fMathSinRandom: TestLambda = proc() =
+    discard sin(rand(6f))
+    (discard)
+
+let fMathCos: TestLambda = proc() =
+    discard cos(1.5f)
+    (discard)
+
+let fMathCosRandom: TestLambda = proc() =
+    discard cos(rand(6f))
+    (discard)
+
+let fMathFloor: TestLambda = proc() =
+    discard floor(1.23f)
+    (discard)
+
+let fImageSample: TestLambda = proc() =
+    discard testImage.get(0,0)
+    (discard)
 
 
 var funcs: seq[NamedTestLambda] = @[
@@ -83,9 +101,14 @@ var funcs: seq[NamedTestLambda] = @[
     (name: "drawRandomDiagonal", lambda: fDrawLineRandomDiagonal),
     (name: "drawLineFillRect", lambda: fDrawLineFillRect),
     (name: "drawLineDrawRect", lambda: fDrawLineDrawRect),
-    (name: "mathRandom", lambda: fMathRandom),
-    (name: "mathRandomLocal", lambda: fMathRandomLocal),
-    (name: "mathSin", lambda: fMathSin),
+    (name: "mathRandomSugar", lambda: fMathRandomSugar),
+    (name: "mathRandomProc", lambda: fMathRandomProc),
+    (name: "mathSin", lambda: fMathSinSugar),
+    (name: "mathSinRandom", lambda: fMathSinRandom),
+    (name: "mathCos", lambda: fMathCos),
+    (name: "mathCosRandom", lambda: fMathCosRandom),
+    (name: "mathFloor", lambda: fMathFloor),
+    (name: "imageSample", lambda: fImageSample),
 ]
 
 var start = 0
