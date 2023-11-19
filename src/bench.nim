@@ -7,9 +7,8 @@ from navigator import navigate
 from screen import Screen
 from game_screen import newGame
 
-var platerSprite: LCDBitmap = nil
 const FPS = 50
-const frameMS: uint = uint((5000/FPS.toFloat()).toInt())
+const frameMS: uint = uint((1000/FPS.toFloat()).toInt())
 
 const location = "DEVICE"
 
@@ -20,8 +19,10 @@ var CW: int
 var CH: int
 
 var testImage: LCDBitmap
+var testImageBitmapData: BitmapData
 var testBack: LCDBitmap
 var testSprite: LCDBitmap
+var playerSprite: LCDSprite
 
 type TestLambda = () -> (void)
 type NamedTestLambda = tuple[name: string, lambda: TestLambda]
@@ -33,6 +34,7 @@ var gfx: ptr PlaydateGraphics
 proc now(): uint = playdate.system.getCurrentTimeMilliseconds
 
 let fNil: TestLambda = () => (discard)
+let fNotImplemented: TestLambda = () => (discard)
 
 let fDrawLineDiagonal: TestLambda = 
     () => gfx.drawLine(0,0,W,H, 1, kColorBlack)
@@ -92,6 +94,55 @@ let fImageSample: TestLambda = proc() =
     discard testImage.get(0,0)
     (discard)
 
+let fDrawText: TestLambda = proc() =
+    discard gfx.drawText("TEST!", CW-22,CH+50)
+    (discard)
+
+let fDrawRect: TestLambda = proc() =
+    gfx.drawRect(CW-50,CH-50,100,100, kColorBlack)
+
+let fFillRect: TestLambda = proc() =
+    gfx.fillRect(CW-50,CH-50,100,100, kColorBlack)
+
+let fDrawEllipse: TestLambda = proc() =
+    gfx.drawEllipse(CW-50,CH-50,100,100, 1, 0f, 0f, kColorBlack)
+
+let fFillEllipse: TestLambda = proc() =
+    gfx.fillEllipse(CW-50,CH-50,100,100, 0f, 0f, kColorBlack)
+
+let fSpriteMoveToStatic: TestLambda = proc() =
+    playerSprite.visible=true
+    playerSprite.moveTo(CW.float,CH.float)
+    (discard)
+
+let fSpriteMoveToRandom: TestLambda = proc() =
+    playerSprite.visible=true
+    playerSprite.moveTo(rand(W).float,rand(H).float)
+    (discard)
+
+let fSpriteSetImage: TestLambda = proc() =
+    playerSprite.setImage(testSprite, kBitmapUnflipped)
+    (discard)
+
+let fSpriteSetZIndex: TestLambda = proc() =
+    playerSprite.zIndex=1
+    (discard)
+
+let fDraw: TestLambda = proc() =
+    testSprite.draw(0,0, kBitmapUnflipped)
+    (discard)
+
+let fDrawPushContext: TestLambda = proc() =
+    gfx.pushContext(testBack)
+    testSprite.draw(0,0, kBitmapUnflipped)
+    gfx.popContext()
+    (discard)
+
+
+let fImageSampleBitmapData: TestLambda = proc() =
+    discard testImageBitmapData.get(0,0)
+    (discard)
+
 
 var funcs: seq[NamedTestLambda] = @[
     (name: "nil", lambda: fNil),
@@ -108,7 +159,28 @@ var funcs: seq[NamedTestLambda] = @[
     (name: "mathCos", lambda: fMathCos),
     (name: "mathCosRandom", lambda: fMathCosRandom),
     (name: "mathFloor", lambda: fMathFloor),
-    (name: "imageSample", lambda: fImageSample),
+    (name: "imageSample - Fast", lambda: fImageSampleBitmapData),
+    (name: "drawText", lambda: fDrawText),
+    (name: "drawTextInRect not in C API", lambda: fNotImplemented),
+    (name: "drawRect", lambda: fDrawRect),
+    (name: "fillRect", lambda: fFillRect),
+    (name: "drawEllipse", lambda: fDrawEllipse),
+    (name: "fillEllipse", lambda: fFillEllipse),
+    (name: "drawEllipse", lambda: fDrawEllipse),
+    (name: "fillEllipse", lambda: fFillEllipse),
+    (name: "spriteMoveToStatic", lambda: fSpriteMoveToStatic),
+    (name: "spriteMoveToRandom", lambda: fSpriteMoveToRandom),
+    (name: "spriteSetImage - Bench Error?", lambda: fNotImplemented),
+    (name: "spriteSetCenterStatic - center not implemented in Nim", lambda: fNotImplemented),
+    (name: "spriteSetCenterToggle - center not implemented in Nim", lambda: fNotImplemented),
+    (name: "spriteSetCenterRandom - center not implemented in Nim", lambda: fNotImplemented),
+    (name: "spriteSetZIndex", lambda: fSpriteSetZIndex),
+    (name: "draw", lambda: fDraw),
+    (name: "drawLockedLocal - lockFocus not implemented in C", lambda: fNotImplemented),
+    (name: "drawLockedLocal - local is a lua-concept", lambda: fNotImplemented),
+    (name: "drawPushContext", lambda: fDrawPushContext),
+    
+    (name: "imageSample - Slow", lambda: fImageSample),
 ]
 
 var start = 0
@@ -125,14 +197,40 @@ method init*(bench: BenchScreen) =
     H = playdate.display.getHeight()
     CW = (W/2).toInt()
     CH = (H/2).toInt()
-    testImage = try: playdate.graphics.newBitmap("/images/nim_logo") except: nil
+    testImage = try: playdate.graphics.newBitmap("/images/background") except: nil
+    testImageBitmapData = testImage.getData()
     testBack = try: playdate.graphics.newBitmap( "Images/background" ) except: nil
     testSprite = try: playdate.graphics.newBitmap("Images/playerImage") except: nil
+
+    playerSprite = playdate.sprite.newSprite()
+    playerSprite.setImage(testSprite, kBitmapUnflipped)
+    playerSprite.moveTo(CW.float,CH.float)
+    playerSprite.visible = false
+    playerSprite.add()
+
+    let backgroundImage = try: playdate.graphics.newBitmap( "Images/background" ) except: nil
+
+    gfx.pushContext(backgroundImage)
+    gfx.drawText("*BENCH*", CW-50,CH-50)
+    gfx.popContext()
+
+    let bgSprite = playdate.sprite.newSprite()
+    bgSprite.setImage(backgroundImage, kBitmapUnflipped)
+    bgSprite.moveTo(0,0)
+    bgSprite.visible = true
+    bgsprite.zIndex = -32768 # lowest possible
+    bgSprite.setIgnoresDrawOffset(true)
+    bgSprite.add()
+
+
     cmd = 0
     count = 0
     done = false
 
 method  update*(bench: BenchScreen): int = 
+    playdate.sprite.drawSprites()
+
+
     if cmd == 0:
             playdate.system.logToConsole(fmt"frameMS: {frameMS}")
             playdate.system.logToConsole("#, BENCH, CALL")
@@ -147,7 +245,9 @@ method  update*(bench: BenchScreen): int =
         done = true
 
     if done and cmd < max:
-        logLines.add(fmt"{funcs[cmd].name} {count}")
+        let (name, lambda) = funcs[cmd]
+        let effectiveCount: int = (if lambda == fNotImplemented: 0 else: count)
+        logLines.add(fmt"{name};{effectiveCount}")
         done = false
         count = 0
         cmd += 1
