@@ -34,7 +34,7 @@ proc catchingUpdate(): int =
 # This is the application entrypoint and event handler
 proc handler(event: PDSystemEvent, keycode: uint) {.raises: [].} =
 
-    if event == kEventInitLua:
+    if event == kEventInit:
         # # Set the update callback
         # # An active screen is required at all times
         # try:

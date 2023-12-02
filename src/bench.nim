@@ -170,7 +170,7 @@ var funcs: seq[NamedTestLambda] = @[
     (name: "fillEllipse", lambda: fFillEllipse),
     (name: "spriteMoveToStatic", lambda: fSpriteMoveToStatic),
     (name: "spriteMoveToRandom", lambda: fSpriteMoveToRandom),
-    (name: "spriteSetImage - Bench Error?", lambda: fNotImplemented),
+    (name: "spriteSetImage", lambda: fSpriteSetImage),
     (name: "spriteSetCenterStatic - center not implemented in Nim", lambda: fNotImplemented),
     (name: "spriteSetCenterToggle - center not implemented in Nim", lambda: fNotImplemented),
     (name: "spriteSetCenterRandom - center not implemented in Nim", lambda: fNotImplemented),

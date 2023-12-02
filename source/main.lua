@@ -38,3 +38,6 @@ end
 function UpdatePanels()
     Panels.update()
 end
+print("hello from lua")
+playdate.setCollectsGarbage(false)
+playdate.stop()
